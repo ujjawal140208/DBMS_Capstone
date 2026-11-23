@@ -1,3 +1,9 @@
 import axios from 'axios'
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api', timeout: 20000 })
+
+const api = axios.create({
+  // Same-origin requests work locally (via Vite proxy) and on Vercel.
+  baseURL: import.meta.env.VITE_API_URL || '/api',
+  timeout: 30000,
+})
+
 export default api

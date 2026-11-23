@@ -1,8 +1,11 @@
 {
-    "routes":[
-        {
-            "src":"/(.*)",
-            "dest":"/index.html"
-        }
-    ]
+  "buildCommand": "cd Frontend && npm run build",
+  "outputDirectory": "Frontend/dist",
+  "installCommand": "cd Frontend && npm ci",
+  "framework": "vite",
+  "functions": {
+    "api/[...path].js": {
+      "maxDuration": 30
+    }
+  }
 }

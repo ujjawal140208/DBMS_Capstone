@@ -1,28 +1,65 @@
-import { createApp } from './src/app.js';
-import { HOST, PORT, DATABASE_NAME } from './src/config.js';
-import { closeDb, connectDb } from './src/db.js';
-import { createIndexes } from './src/indexes.js';
+
+import dns from 'node:dns';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
+
+const BACKEND_DIR = path.dirname(fileURLToPath(import.meta.url));
+
+// Load environment variables first.
+dotenv.config({
+  path: path.join(BACKEND_DIR, '.env')
+});
+
+// Configure DNS before importing the application or Mongoose.
+const servers = (
+  process.env.DNS_SERVERS || '8.8.8.8,8.8.4.4'
+)
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+dns.setServers(servers);
+dns.setDefaultResultOrder('ipv4first');
+
+console.log('[DNS] Configured:', dns.getServers());
+
+// Dynamic imports ensure DNS configuration happens first.
+const { createApp } = await import('./src/app.js');
+const { HOST, PORT, DATABASE_NAME } =
+  await import('./src/config.js');
+const { connectDb, closeDb } =
+  await import('./src/db.js');
+const { createIndexes } =
+  await import('./src/indexes.js');
 
 const app = createApp();
 
-// Do not crash on startup if MongoDB is unreachable: report it clearly and keep the API alive,
-// so /api/health and the UI show the real reason and every request retries the connection.
 try {
   await connectDb();
   await createIndexes();
-  console.log(`MongoDB connected: database '${DATABASE_NAME}'`);
-} catch (err) {
-  console.error(`MongoDB NOT connected: ${err.message}`);
+
+  console.log(
+    `[MongoDB] Connected to ${DATABASE_NAME}`
+  );
+} catch (error) {
+  console.error(
+    '[MongoDB] Connection failed:',
+    error.message
+  );
 }
 
 const server = app.listen(PORT, HOST, () => {
-  console.log(`CareSphere API listening on http://${HOST}:${PORT}  (health: /api/health)`);
+  console.log(
+    `[CareSphere] API running at http://${HOST}:${PORT}`
+  );
 });
 
-const shutdown = async () => {
+async function shutdown() {
   server.close();
   await closeDb();
   process.exit(0);
-};
+}
+
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);

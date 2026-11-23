@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { CORS_ORIGINS, TRUST_PROXY } from './config.js';
-import { mongoose, requireDb } from './db.js';
+import { connectDb, mongoose, requireDb } from './db.js';
 import { HttpError } from './utils.js';
 import dashboardRouter from './routes/dashboard.js';
 import recordsRouter from './routes/records.js';
@@ -31,12 +31,20 @@ export function createApp() {
 
   app.get('/', (_req, res) => res.json({ name: 'CareSphere API', health: '/api/health' }));
 
-  // /api/health is registered before the records router, whose catch-all "/api/:collection" would swallow it.
-  app.get('/api/health', requireDb, async (_req, res, next) => {
+  // Health must remain reachable even when Atlas is down, so deployment failures
+  // are diagnosable instead of being hidden behind a generic frontend error.
+  app.get('/api/health', async (_req, res) => {
     try {
+      await connectDb();
       await mongoose.connection.db.command({ ping: 1 });
       res.json({ status: 'ok', database: 'connected' });
-    } catch (err) { next(err); }
+    } catch (err) {
+      res.status(503).json({
+        status: 'error',
+        database: 'disconnected',
+        detail: err?.message || 'Database connection failed',
+      });
+    }
   });
 
   app.use('/api/dashboard', requireDb, dashboardRouter);

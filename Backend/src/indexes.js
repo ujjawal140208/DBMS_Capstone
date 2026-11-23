@@ -11,6 +11,8 @@ export async function createIndexes() {
   const idx = (model, keys, opts = {}) => models[model].collection.createIndex(keys, opts);
   const specs = [
     ['hospitals.hospital_id', () => idx('hospitals', { hospital_id: 1 }, { unique: true })],
+    ['public_hospitals.facility_id', () => idx('public_hospitals', { facility_id: 1 }, { unique: true })],
+    ['public_hospitals.source_record_id', () => idx('public_hospitals', { source_record_id: 1 }, { unique: true, sparse: true })],
     ['departments.department_id', () => idx('departments', { department_id: 1 }, { unique: true })],
     ['patients.patient_id', () => idx('patients', { patient_id: 1 }, { unique: true })],
     ['patients.hospital_name', () => idx('patients', { hospital_id: 1, name: 1 })],

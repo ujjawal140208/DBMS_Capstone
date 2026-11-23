@@ -9,7 +9,7 @@ import {
 
 const router = Router();
 const ACTIVE = ['scheduled', 'confirmed'];
-const SEARCH_FIELDS = ['name', 'patient_id', 'doctor_id', 'appointment_id', 'bill_id', 'hospital_id'];
+const SEARCH_FIELDS = ['name', 'patient_id', 'doctor_id', 'appointment_id', 'bill_id', 'hospital_id', 'facility_id', 'source_record_id', 'facility_type', 'district', 'state'];
 
 router.param('collection', (_req, _res, next, name) => {
   if (!COLLECTIONS.includes(name)) return next(new HttpError(404, 'Unknown collection'));

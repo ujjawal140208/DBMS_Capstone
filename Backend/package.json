@@ -12,7 +12,9 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "seed": "node scripts/seed.js",
-    "check-db": "node scripts/check-db.js"
+    "check-db": "node scripts/check-db.js",
+    "test": "node --test",
+    "import:hospitals": "node scripts/import-open-hospitals.js"
   },
   "dependencies": {
     "@faker-js/faker": "^10.6.0",

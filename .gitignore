@@ -1,15 +1,15 @@
-# Secrets / local configuration
+# Secrets and local environment files
 .env
 .env.*
-!.env.example
 **/.env
 **/.env.*
+!.env.example
 !**/.env.example
 
-# Dependencies and build output
+# Dependencies and generated build output
 node_modules/
 **/node_modules/
 dist/
 **/dist/
-.DS_Store
 .vercel/
+.DS_Store

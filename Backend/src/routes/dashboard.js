@@ -5,8 +5,9 @@ import { asyncHandler, serialize } from '../utils.js';
 const router = Router();
 
 router.get('/summary', asyncHandler(async (_req, res) => {
-  const [hospitals, patients, doctors, appointments, pendingBills, revenueRows] = await Promise.all([
+  const [hospitals, publicFacilities, patients, doctors, appointments, pendingBills, revenueRows] = await Promise.all([
     models.hospitals.countDocuments({}),
+    models.public_hospitals.countDocuments({}),
     models.patients.countDocuments({}),
     models.doctors.countDocuments({}),
     models.appointments.countDocuments({}),
@@ -14,7 +15,7 @@ router.get('/summary', asyncHandler(async (_req, res) => {
     models.payments.aggregate([{ $group: { _id: null, total: { $sum: '$amount' } } }]),
   ]);
   res.json({
-    hospitals, patients, doctors, appointments,
+    hospitals, public_facilities: publicFacilities, patients, doctors, appointments,
     pending_bills: pendingBills,
     revenue: revenueRows[0]?.total ?? 0,
   });

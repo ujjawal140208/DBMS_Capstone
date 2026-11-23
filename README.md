@@ -87,11 +87,7 @@ npm run dev
 ```
 Open http://localhost:5173
 
-Optional frontend API URL:
-Create `Frontend/.env`:
-```env
-VITE_API_URL=http://127.0.0.1:8000/api
-```
+The frontend always calls `/api`. Vite proxies that path to the local Express server, so no frontend `.env` file is needed.
 
 ## API overview
 - `GET /api/health`
@@ -104,7 +100,7 @@ VITE_API_URL=http://127.0.0.1:8000/api
 - `DELETE /api/{collection}/{record_id}`
 
 Allowed collection names:
-`hospitals`, `departments`, `patients`, `doctors`, `appointments`,
+`hospitals`, `public_hospitals`, `departments`, `patients`, `doctors`, `appointments`,
 `prescriptions`, `medicines`, `lab_tests`, `lab_results`, `bills`, `payments`,
 `pharmacy_inventory`, `admissions`, `beds`, `audit_logs`.
 
@@ -123,3 +119,46 @@ Authentication, role-based access control, field-level privacy, encryption polic
 backups, audit retention, rate limiting, formal migrations, observability, and
 healthcare regulatory compliance are intentionally not implemented in this academic
 demo. Do not use real patient data.
+
+## Vercel deployment (frontend + API)
+
+This repository deploys as one Vercel project. The Vite frontend is built from `Frontend/`, while `api/[...path].js` exposes the existing Express application as a serverless function. Vercel proxy trust is enabled automatically for the rate limiter. The frontend always calls the same-origin `/api` path; it never embeds `127.0.0.1` in a production bundle.
+
+1. Import the repository into Vercel with the repository root (`./`) as the Root Directory.
+2. Add `MONGODB_URI` and `DATABASE_NAME` in Vercel Project Settings → Environment Variables. Use the Atlas connection string and `caresphere_db` (or your actual database name).
+3. Ensure the Atlas database user has read/write access to that database and the Atlas Network Access rules allow Vercel serverless connections. For a demo, Atlas `0.0.0.0/0` is commonly used; use a dedicated least-privilege database user and tighten access where your deployment setup permits.
+4. Redeploy after changing environment variables.
+5. Verify `https://YOUR-DOMAIN.vercel.app/api/health`. A successful response is `{ "status": "ok", "database": "connected" }`. A 503 response includes a safe diagnostic message for missing/invalid Atlas configuration or connectivity failures.
+
+Vercel configuration installs both `Backend` and `Frontend` dependencies, builds the Vite app, and deploys the Express API function. Do not set `VITE_API_URL` to localhost in Vercel.
+
+## Public hospital directory import
+
+The optional importer adds public health-facility directory entries to the separate `public_hospitals` collection. It does not create real patient, doctor, appointment, or clinical records.
+
+The import source is Esri India's **Hospital Directory of India** public feature layer. Its item description traces the underlying facility information to the Government of India's OGD Hospital Directory and All India Health Centres Directory. The importer retains source IDs, source URLs, and provenance notes on each imported record. Check the upstream data terms and attribution before redistributing the imported dataset.
+
+Configure `Backend/.env` using `Backend/.env.example`, then run:
+
+```bash
+cd Backend
+npm install
+npm run import:hospitals -- --sample   # imports one randomly selected hospital-type record
+npm run import:hospitals               # imports all available facilities in pages
+npm run import:hospitals -- --limit 5000
+```
+
+The importer is idempotent: records are upserted using stable source-derived `facility_id` values. Existing demo hospital records and the other seeded demo collections are not deleted. A public facility directory is kept distinct from synthetic patient and appointment data.
+
+## Tests
+
+```bash
+cd Backend
+npm test
+```
+
+The test suite covers request sanitization, query validation, MongoDB URI validation, actionable connection diagnostics, health endpoint behaviour when the database is unavailable, 404 handling, and malformed JSON handling.
+
+## Local development
+
+Run the backend in one terminal (`cd Backend && npm install && npm run dev`) and the frontend in another (`cd Frontend && npm install && npm run dev`). The Vite development server proxies `/api` to `http://127.0.0.1:8000`.

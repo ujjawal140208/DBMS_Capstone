@@ -14,22 +14,23 @@ function clean(value, fallback) {
   return v;
 }
 
-export const MONGODB_URI = clean(process.env.MONGODB_URI, 'mongodb://127.0.0.1:27017');
+export const MONGODB_URI = clean(process.env.MONGODB_URI, process.env.VERCEL ? '' : 'mongodb://127.0.0.1:27017');
 export const DATABASE_NAME = clean(process.env.DATABASE_NAME, 'caresphere_db');
 export const PORT = Number(process.env.PORT) || 8000;
 export const HOST = clean(process.env.HOST, '127.0.0.1');
-export const TRUST_PROXY = process.env.TRUST_PROXY === '1';
+// Vercel runs behind its trusted edge proxy; enable one-hop IP forwarding there.
+export const TRUST_PROXY = process.env.TRUST_PROXY === '1' || process.env.VERCEL === '1';
 export const CORS_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')
   .split(',').map((x) => x.trim()).filter(Boolean);
 
 export const COLLECTIONS = [
-  'hospitals', 'departments', 'patients', 'doctors', 'appointments',
+  'hospitals', 'public_hospitals', 'departments', 'patients', 'doctors', 'appointments',
   'prescriptions', 'medicines', 'lab_tests', 'lab_results', 'bills',
   'payments', 'pharmacy_inventory', 'admissions', 'beds', 'audit_logs',
 ];
 
 export const ID_FIELDS = {
-  hospitals: 'hospital_id', departments: 'department_id', patients: 'patient_id',
+  hospitals: 'hospital_id', public_hospitals: 'facility_id', departments: 'department_id', patients: 'patient_id',
   doctors: 'doctor_id', appointments: 'appointment_id', prescriptions: 'prescription_id',
   medicines: 'medicine_id', lab_tests: 'lab_test_id', lab_results: 'result_id',
   bills: 'bill_id', payments: 'payment_id', pharmacy_inventory: 'inventory_id',

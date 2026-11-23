@@ -48,7 +48,7 @@ npm run check-db
 - Request hardening: Helmet security headers, CORS whitelist, rate limit (300 req/min/IP),
   100 kB body limit, `$`-operator / dotted-key stripping on all writes (NoSQL injection),
   string-only query params, regex-escaped search (no ReDoS), collection-name whitelist.
-- The API binds to `127.0.0.1` by default. Set `HOST` / `TRUST_PROXY=1` deliberately when deploying.
+- The API binds to `0.0.0.0` by default so it works in hosted web services; use `HOST=127.0.0.1` if you specifically want loopback-only binding. Set `TRUST_PROXY=1` when hosted behind a trusted reverse proxy.
 
 ## 2. Start backend
 ```bash
@@ -87,7 +87,7 @@ npm run dev
 ```
 Open http://localhost:5173
 
-The frontend always calls `/api`. Vite proxies that path to the local Express server, so no frontend `.env` file is needed.
+When `VITE_API_URL` is blank, the frontend calls `/api` and Vite proxies it to the local Express server. In production, `VITE_API_URL` points directly to the Render API service.
 
 ## API overview
 - `GET /api/health`
@@ -120,17 +120,19 @@ backups, audit retention, rate limiting, formal migrations, observability, and
 healthcare regulatory compliance are intentionally not implemented in this academic
 demo. Do not use real patient data.
 
-## Vercel deployment (frontend + API)
+## Production deployment (Vercel frontend + Render API + MongoDB Atlas)
 
-This repository deploys as one Vercel project. The Vite frontend is built from `Frontend/`, while `api/[...path].js` exposes the existing Express application as a serverless function. Vercel proxy trust is enabled automatically for the rate limiter. The frontend always calls the same-origin `/api` path; it never embeds `127.0.0.1` in a production bundle.
+This project uses a split deployment: Vercel hosts the static Vite frontend, Render runs the existing Express backend as a normal Node web service, and MongoDB Atlas remains the database. This avoids wrapping the long-running Express server in a custom Vercel catch-all function.
 
-1. Import the repository into Vercel with the repository root (`./`) as the Root Directory.
-2. Add `MONGODB_URI` and `DATABASE_NAME` in Vercel Project Settings → Environment Variables. Use the Atlas connection string and `caresphere_db` (or your actual database name).
-3. Ensure the Atlas database user has read/write access to that database and the Atlas Network Access rules allow Vercel serverless connections. For a demo, Atlas `0.0.0.0/0` is commonly used; use a dedicated least-privilege database user and tighten access where your deployment setup permits.
-4. Redeploy after changing environment variables.
-5. Verify `https://YOUR-DOMAIN.vercel.app/api/health`. A successful response is `{ "status": "ok", "database": "connected" }`. A 503 response includes a safe diagnostic message for missing/invalid Atlas configuration or connectivity failures.
+See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for the exact setup steps. In summary:
 
-Vercel configuration installs both `Backend` and `Frontend` dependencies, builds the Vite app, and deploys the Express API function. Do not set `VITE_API_URL` to localhost in Vercel.
+- Vercel Root Directory: `Frontend`; use the Vite defaults (`npm ci`, `npm run build`, output `dist`).
+- Render Root Directory: `Backend`; build `npm ci`; start `npm start`; bind `HOST=0.0.0.0` and use Render's injected `PORT`. A starter Blueprint is included as `render.yaml`.
+- Render environment: set `MONGODB_URI`, `DATABASE_NAME=caresphere_db`, and `CORS_ORIGINS` to your exact Vercel origin plus local origins.
+- Vercel environment: set `VITE_API_URL=https://YOUR-RENDER-SERVICE.onrender.com/api`. Vite embeds this value into the production bundle, so redeploy the frontend after changing it.
+- Local development still uses the existing Vite proxy at `/api` to `http://127.0.0.1:8000`; leave `VITE_API_URL` blank locally.
+
+A Render Free web service can spin down after 15 minutes without inbound traffic and can take about a minute to wake up. For a demo this may be acceptable; use an always-on paid service if cold starts are unacceptable.
 
 ## Public hospital directory import
 

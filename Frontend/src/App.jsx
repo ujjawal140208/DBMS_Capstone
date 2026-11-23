@@ -47,6 +47,15 @@ const fieldSets = {
   audit_logs:[['log_id','Log ID'],['action','Action'],['collection','Collection'],['record_id','Record ID'],['created_at','Created at']]
 }
 const money = n => new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(Number(n||0))
+const apiErrorMessage = (error, fallback) => {
+  const detail = error?.response?.data?.detail || error?.response?.data?.message
+  if (detail) return detail
+  const status = error?.response?.status ? `HTTP ${error.response.status}` : (error?.code || error?.message || 'Unknown error')
+  const endpoint = error?.config?.baseURL && error?.config?.url
+    ? `${error.config.baseURL}${error.config.url}`
+    : ''
+  return `${fallback} (${status})${endpoint ? ` · ${endpoint}` : ''}`
+}
 function App(){
   const [active,setActive]=useState('dashboard')
   const [summary,setSummary]=useState(null)
@@ -66,13 +75,13 @@ function App(){
   const current=modules.find(m=>m[0]===active)
   const fetchDashboard=async()=>{
     try{const [s,c]=await Promise.all([api.get('/dashboard/summary'),api.get('/dashboard/centres')]);setSummary(s.data);setCentres(c.data);setError('');setApiStatus('connected')}
-    catch(e){setApiStatus('offline');setError(e.response?.data?.detail||`API unavailable (${e.code||e.message}). Check /api/health and the deployed API configuration.`)}
+    catch(e){setApiStatus('offline');setError(apiErrorMessage(e, 'API unavailable. Check the API base URL and backend service.'))}
   }
   const fetchRecords=async()=>{
     if(active==='dashboard')return
     setLoading(true)
     try{const r=await api.get(`/${active}`,{params:{skip:page*pageSize,limit:pageSize,search:search||undefined,hospital_id:centre||undefined}});setRecords(r.data.items);setTotal(r.data.total);setError('');setApiStatus('connected')}
-    catch(e){setApiStatus('offline');setError(e.response?.data?.detail||`Unable to load records: ${e.code||e.message}. Check /api/health and the API deployment.`);setRecords([])}
+    catch(e){setApiStatus('offline');setError(apiErrorMessage(e, 'Unable to load records. Check the API base URL and backend service.'));setRecords([])}
     finally{setLoading(false)}
   }
   useEffect(()=>{fetchDashboard()},[])

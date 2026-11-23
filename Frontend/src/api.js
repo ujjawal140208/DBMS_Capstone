@@ -1,11 +1,13 @@
 import axios from 'axios'
 
-// Always use the current origin. Vite proxies this path during local development;
-// Vercel routes it to the serverless Express function in production.
-// Deliberately do not read VITE_API_URL: stale localhost values break production builds.
+// Local development defaults to /api and is proxied by Vite to localhost:8000.
+// Production sets VITE_API_URL to the separately hosted Express API base URL.
+const configuredBase = (import.meta.env.VITE_API_URL || '').trim()
+const baseURL = configuredBase ? configuredBase.replace(/\/+$/, '') : '/api'
+
 const api = axios.create({
-  baseURL: '/api',
-  timeout: 30000,
+  baseURL,
+  timeout: 120000, // Render Free instances can take about a minute to wake after idle.
   headers: { Accept: 'application/json' },
 })
 

@@ -17,7 +17,7 @@ function clean(value, fallback) {
 export const MONGODB_URI = clean(process.env.MONGODB_URI, process.env.VERCEL ? '' : 'mongodb://127.0.0.1:27017');
 export const DATABASE_NAME = clean(process.env.DATABASE_NAME, 'caresphere_db');
 export const PORT = Number(process.env.PORT) || 8000;
-export const HOST = clean(process.env.HOST, '127.0.0.1');
+export const HOST = clean(process.env.HOST, '0.0.0.0');
 // Vercel runs behind its trusted edge proxy; enable one-hop IP forwarding there.
 export const TRUST_PROXY = process.env.TRUST_PROXY === '1' || process.env.VERCEL === '1';
 export const CORS_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')

@@ -5,18 +5,22 @@ import { asyncHandler, serialize } from '../utils.js';
 const router = Router();
 
 router.get('/summary', asyncHandler(async (_req, res) => {
-  const [hospitals, publicFacilities, patients, doctors, appointments, pendingBills, revenueRows] = await Promise.all([
+  const [hospitals, publicFacilities, patients, doctors, appointments, pendingAppointments, pendingBills, registeredBeds, occupiedBeds, revenueRows] = await Promise.all([
     models.hospitals.countDocuments({}),
     models.public_hospitals.countDocuments({}),
     models.patients.countDocuments({}),
     models.doctors.countDocuments({}),
     models.appointments.countDocuments({}),
+    models.appointments.countDocuments({ status: { $in: ['scheduled', 'pending', 'confirmed'] } }),
     models.bills.countDocuments({ status: { $in: ['pending', 'partially_paid'] } }),
+    models.beds.countDocuments({}),
+    models.beds.countDocuments({ status: { $in: ['occupied', 'in use', 'in-use'] } }),
     models.payments.aggregate([{ $group: { _id: null, total: { $sum: '$amount' } } }]),
   ]);
   res.json({
     hospitals, public_facilities: publicFacilities, patients, doctors, appointments,
-    pending_bills: pendingBills,
+    pending_appointments: pendingAppointments, pending_bills: pendingBills,
+    registered_beds: registeredBeds, occupied_beds: occupiedBeds,
     revenue: revenueRows[0]?.total ?? 0,
   });
 }));

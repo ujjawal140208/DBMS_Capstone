@@ -2,14 +2,18 @@ services:
   - type: web
     name: caresphere-api
     runtime: node
+    region: singapore
     plan: free
     rootDir: Backend
     buildCommand: npm ci
     startCommand: npm start
-    healthCheckPath: /
+    healthCheckPath: /api/health/live
+    autoDeployTrigger: commit
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: 24.22.1
       - key: HOST
         value: 0.0.0.0
       - key: TRUST_PROXY

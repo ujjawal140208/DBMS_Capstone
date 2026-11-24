@@ -14,14 +14,29 @@ function clean(value, fallback) {
   return v;
 }
 
-export const MONGODB_URI = clean(process.env.MONGODB_URI, process.env.VERCEL ? '' : 'mongodb://127.0.0.1:27017');
+export function resolveMongoUri(env = process.env) {
+  const hosted = env.NODE_ENV === 'production' || Boolean(env.VERCEL);
+  return clean(env.MONGODB_URI, hosted ? '' : 'mongodb://127.0.0.1:27017');
+}
+
+// Never silently fall back to localhost on a hosted service. A missing Render
+// secret should produce a clear configuration error, not a misleading 127.0.0.1 timeout.
+export const MONGODB_URI = resolveMongoUri();
 export const DATABASE_NAME = clean(process.env.DATABASE_NAME, 'caresphere_db');
 export const PORT = Number(process.env.PORT) || 8000;
 export const HOST = clean(process.env.HOST, '0.0.0.0');
-// Vercel runs behind its trusted edge proxy; enable one-hop IP forwarding there.
+// Render forwards client IP headers through its edge proxy; the hosted service enables one-hop trust.
 export const TRUST_PROXY = process.env.TRUST_PROXY === '1' || process.env.VERCEL === '1';
-export const CORS_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')
-  .split(',').map((x) => x.trim()).filter(Boolean);
+export const CORS_ORIGINS = [...new Set(
+  (process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value) => {
+      try { return new URL(value).origin; } catch { return ''; }
+    })
+    .filter(Boolean),
+)];
 
 export const COLLECTIONS = [
   'hospitals', 'public_hospitals', 'departments', 'patients', 'doctors', 'appointments',

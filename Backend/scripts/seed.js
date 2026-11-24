@@ -96,6 +96,57 @@ for (let i = 1; i <= appointmentCount; i++) {
 }
 if (buf.length) dupes += await upsertMany('appointments', 'appointment_id', buf);
 
-console.log(`Seed complete: ${hospitals.length} centres, ${doctorCount.toLocaleString()} doctors, ${patientCount.toLocaleString()} patients, ${appointmentCount.toLocaleString()} appointments.`);
+// A small synthetic bed board makes the inpatient UI demonstrable without
+// implying that the public hospital directory contains operational bed data.
+const bedsPerHospital = Math.max(0, Math.min(100, envInt('SEED_BEDS_PER_HOSPITAL', 16)));
+const wards = ['General Ward', 'Cardiology', 'ICU', 'Step-down'];
+const bedStatuses = ['occupied', 'occupied', 'occupied', 'available', 'available', 'cleaning'];
+const bedDocs = [];
+const admissionDocs = [];
+let admissionSequence = 1;
+for (const [hospitalIndex, [hospitalId]] of hospitals.entries()) {
+  const patientsAtCentre = patientCount > hospitalIndex
+    ? Math.floor((patientCount - 1 - hospitalIndex) / hospitals.length) + 1
+    : 0
+  const bedsToSeed = Math.min(bedsPerHospital, patientsAtCentre)
+  const latestPatientAtCentre = patientsAtCentre
+    ? patientCount - ((patientCount - 1 - hospitalIndex) % hospitals.length)
+    : 0
+  for (let i = 1; i <= bedsToSeed; i++) {
+    const status = pick(bedStatuses);
+    const ward = wards[(i - 1) % wards.length];
+    const bedId = `BED-${hospitalId}-${pad(i, 3)}`;
+    // Choose a recent synthetic patient ID for this centre. The dashboard's
+    // first page is sorted newest-first, so the demo bed board can resolve the
+    // associated patient names without loading the entire patient collection.
+    const patientNumber = latestPatientAtCentre - (i - 1) * hospitals.length;
+    const patientId = `PAT${pad(patientNumber, 7)}`;
+    bedDocs.push({
+      bed_id: bedId,
+      hospital_id: hospitalId,
+      ward,
+      bed_number: `${ward === 'General Ward' ? 'GW' : ward === 'Step-down' ? 'SD' : ward === 'Cardiology' ? 'CR' : 'ICU'}-${pad(i, 2)}`,
+      bed_type: ward === 'ICU' ? 'Critical care' : 'Standard',
+      status,
+      patient_id: status === 'occupied' ? patientId : null,
+      created_at: new Date().toISOString(),
+    });
+    if (status === 'occupied') {
+      admissionDocs.push({
+        admission_id: `ADM-${hospitalId}-${pad(admissionSequence++, 5)}`,
+        hospital_id: hospitalId,
+        patient_id: patientId,
+        bed_id: bedId,
+        admitted_at: new Date(now - rint(1, 25) * 86_400_000).toISOString(),
+        status: 'admitted',
+        admission_type: 'Synthetic demo admission',
+      });
+    }
+  }
+}
+if (bedDocs.length) await upsertMany('beds', 'bed_id', bedDocs);
+if (admissionDocs.length) await upsertMany('admissions', 'admission_id', admissionDocs);
+
+console.log(`Seed complete: ${hospitals.length} centres, ${doctorCount.toLocaleString()} doctors, ${patientCount.toLocaleString()} patients, ${appointmentCount.toLocaleString()} appointments, ${bedDocs.length.toLocaleString()} beds, ${admissionDocs.length.toLocaleString()} admissions.`);
 if (dupes) console.log(`(${dupes} appointment(s) skipped because they collided with an existing active doctor/time slot.)`);
 await closeDb();

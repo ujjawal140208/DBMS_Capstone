@@ -10,7 +10,7 @@ mongoose.set('strictQuery', false);
 export const redact = (text) => String(text).replace(/(mongodb(?:\+srv)?:\/\/[^:/?#\s]+:)[^@\s]+@/gi, '$1****@');
 
 export function validateUri(uri = MONGODB_URI) {
-  if (!uri) throw new Error('MONGODB_URI is not configured. Add your MongoDB Atlas connection string in Vercel Environment Variables.');
+  if (!uri) throw new Error('MONGODB_URI is not configured. Add your MongoDB Atlas connection string to the backend environment variables (Backend/.env locally or Render Environment in production).');
   if (!/^mongodb(\+srv)?:\/\//i.test(uri)) {
     throw new Error('MONGODB_URI must start with mongodb:// or mongodb+srv://');
   }

@@ -17,8 +17,13 @@ export function createApp() {
   app.use(cors({
     origin: (origin, cb) => {
       // Allow same-origin / curl (no Origin header) and the explicit whitelist only.
-      if (!origin || CORS_ORIGINS.includes(origin)) return cb(null, true);
-      cb(null, false);
+      if (!origin) return cb(null, true);
+      let requestOrigin;
+      try { requestOrigin = new URL(origin).origin; }
+      catch { return cb(new HttpError(403, 'Invalid browser Origin header.')); }
+      if (CORS_ORIGINS.includes(requestOrigin)) return cb(null, true);
+      console.warn(`[cors] Rejected browser origin: ${requestOrigin}`);
+      cb(new HttpError(403, `Origin '${requestOrigin}' is not listed in CORS_ORIGINS.`));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -29,10 +34,12 @@ export function createApp() {
   }));
   app.use(express.json({ limit: '100kb' }));
 
-  app.get('/', (_req, res) => res.json({ name: 'CareSphere API', health: '/api/health' }));
+  app.get('/', (_req, res) => res.json({ name: 'CareSphere API', status: 'running', health: '/api/health' }));
+  // Liveness is intentionally independent of MongoDB, so Render can verify the
+  // Node process is listening even while Atlas is being configured or recovered.
+  app.get('/api/health/live', (_req, res) => res.json({ status: 'ok', service: 'caresphere-api' }));
 
-  // Health must remain reachable even when Atlas is down, so deployment failures
-  // are diagnosable instead of being hidden behind a generic frontend error.
+  // Readiness checks the actual Atlas connection and ping, not just the process.
   app.get('/api/health', async (_req, res) => {
     try {
       await connectDb();

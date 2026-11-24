@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { hint, isLocalUri, validateUri } from '../src/db.js';
+import { resolveMongoUri } from '../src/config.js';
 
 test('validateUri accepts MongoDB URI schemes', () => {
   assert.doesNotThrow(() => validateUri('mongodb://127.0.0.1:27017/test'));
@@ -20,4 +21,11 @@ test('isLocalUri distinguishes localhost from Atlas', () => {
 
 test('hint gives safe, actionable authentication guidance', () => {
   assert.match(hint(new Error('Authentication failed')), /URL-encode special characters/);
+});
+
+
+test('production configuration never silently falls back to a local MongoDB server', () => {
+  assert.equal(resolveMongoUri({ NODE_ENV: 'production' }), '');
+  assert.equal(resolveMongoUri({ NODE_ENV: 'development' }), 'mongodb://127.0.0.1:27017');
+  assert.equal(resolveMongoUri({ NODE_ENV: 'production', MONGODB_URI: 'mongodb+srv://db.example/test' }), 'mongodb+srv://db.example/test');
 });

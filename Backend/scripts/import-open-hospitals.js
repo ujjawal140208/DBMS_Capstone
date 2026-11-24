@@ -5,8 +5,10 @@ import { mapOpenHospitalFeature } from '../src/openHospitalDataset.js';
 
 /**
  * Imports the public India Hospital Directory feature layer published by Esri India.
- * The layer's item description traces the source data to Government of India OGD
- * Hospital Directory and All India Health Centres Directory resources.
+ * The corresponding Government of India OGD hospital-directory and health-centre
+ * catalogue links are stored as contextual references. This script does not claim
+ * a verified row-level match or a particular redistribution licence; check provider
+ * terms and attribution before re-publishing imported data.
  *
  * Usage:
  *   npm run import:hospitals -- --sample   # one randomly selected facility

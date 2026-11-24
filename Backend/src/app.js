@@ -54,14 +54,11 @@ export function createApp() {
   app.use('/api', requireDb, recordsRouter);
 
   // Serve the built Vite app from this same Express service in production.
-  // In development, Vite serves the UI and proxies /api to this server.
+  // This application uses a single-page dashboard rooted at '/', not URL-based
+  // client routes. Serve static assets but do not turn unknown paths into index.html:
+  // API clients and the 404 test must receive a real JSON 404 for unknown URLs.
   if (fs.existsSync(indexFile)) {
     app.use(express.static(frontendDist, { index: false, maxAge: '1h' }));
-    app.get('*', (req, res, next) => {
-      if (req.path.startsWith('/api/')) return next();
-      if (req.method !== 'GET' || !req.accepts('html')) return next();
-      res.sendFile(indexFile);
-    });
   }
 
   app.use((_req, _res, next) => next(new HttpError(404, 'Not found')));

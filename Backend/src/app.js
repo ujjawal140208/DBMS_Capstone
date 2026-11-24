@@ -1,8 +1,10 @@
 import express from 'express';
-import cors from 'cors';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import fs from 'node:fs';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { CORS_ORIGINS, TRUST_PROXY } from './config.js';
+import { TRUST_PROXY } from './config.js';
 import { connectDb, mongoose, requireDb } from './db.js';
 import { HttpError } from './utils.js';
 import dashboardRouter from './routes/dashboard.js';
@@ -14,27 +16,21 @@ export function createApp() {
   if (TRUST_PROXY) app.set('trust proxy', 1);
 
   app.use(helmet());
-  app.use(cors({
-    origin: (origin, cb) => {
-      // Allow same-origin / curl (no Origin header) and the explicit whitelist only.
-      if (!origin) return cb(null, true);
-      let requestOrigin;
-      try { requestOrigin = new URL(origin).origin; }
-      catch { return cb(new HttpError(403, 'Invalid browser Origin header.')); }
-      if (CORS_ORIGINS.includes(requestOrigin)) return cb(null, true);
-      console.warn(`[cors] Rejected browser origin: ${requestOrigin}`);
-      cb(new HttpError(403, `Origin '${requestOrigin}' is not listed in CORS_ORIGINS.`));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-  }));
+  // The production frontend and API share one Render origin. During local
+  // development Vite proxies /api to Express, so browser CORS is not needed.
   app.use(rateLimit({
     windowMs: 60_000, limit: 300, standardHeaders: 'draft-7', legacyHeaders: false,
     message: { detail: 'Too many requests, please slow down.' },
   }));
   app.use(express.json({ limit: '100kb' }));
 
-  app.get('/', (_req, res) => res.json({ name: 'CareSphere API', status: 'running', health: '/api/health' }));
+  const backendDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const frontendDist = path.resolve(backendDir, '..', 'Frontend', 'dist');
+  const indexFile = path.join(frontendDist, 'index.html');
+  app.get('/', (_req, res) => {
+    if (fs.existsSync(indexFile)) return res.sendFile(indexFile);
+    return res.json({ name: 'CareSphere API', status: 'running', health: '/api/health' });
+  });
   // Liveness is intentionally independent of MongoDB, so Render can verify the
   // Node process is listening even while Atlas is being configured or recovered.
   app.get('/api/health/live', (_req, res) => res.json({ status: 'ok', service: 'caresphere-api' }));
@@ -56,6 +52,17 @@ export function createApp() {
 
   app.use('/api/dashboard', requireDb, dashboardRouter);
   app.use('/api', requireDb, recordsRouter);
+
+  // Serve the built Vite app from this same Express service in production.
+  // In development, Vite serves the UI and proxies /api to this server.
+  if (fs.existsSync(indexFile)) {
+    app.use(express.static(frontendDist, { index: false, maxAge: '1h' }));
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api/')) return next();
+      if (req.method !== 'GET' || !req.accepts('html')) return next();
+      res.sendFile(indexFile);
+    });
+  }
 
   app.use((_req, _res, next) => next(new HttpError(404, 'Not found')));
 

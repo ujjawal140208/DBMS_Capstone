@@ -4,9 +4,8 @@ services:
     runtime: node
     region: singapore
     plan: free
-    rootDir: Backend
-    buildCommand: npm ci
-    startCommand: npm start
+    buildCommand: npm ci --prefix Backend && npm ci --prefix Frontend && npm run build --prefix Frontend
+    startCommand: npm start --prefix Backend
     healthCheckPath: /api/health/live
     autoDeployTrigger: commit
     envVars:
@@ -21,6 +20,4 @@ services:
       - key: DATABASE_NAME
         value: caresphere_db
       - key: MONGODB_URI
-        sync: false
-      - key: CORS_ORIGINS
         sync: false

@@ -1,38 +1,31 @@
 # CareSphere — Hospital Operations Workspace
 
-CareSphere is a demo hospital operations application built with React + Vite, Node.js + Express, Mongoose and MongoDB Atlas. It includes a doctor dashboard, patient EHR view, inpatient bed board, patient appointments view and a collection-based data management workspace.
+CareSphere is a demo hospital operations application built with React + Vite, Node.js + Express, Mongoose and MongoDB Atlas. It includes a doctor dashboard, patient EHR view, inpatient bed board, patient appointments view and collection-based data management workspace.
+
+## Technology
+- Frontend: React 18, Vite 6, Axios, Recharts, Lucide React
+- Backend: Node.js, Express 4, Mongoose 8
+- Database: MongoDB Atlas
+- Hosting: **one Render Web Service** serves both the built frontend and Express API; MongoDB Atlas remains the database.
 
 ## Project structure
-
 ```text
 DBMS_capstone/
-├── Backend/
-│   ├── scripts/       # synthetic seed + public hospital import
-│   ├── src/           # Express app, Mongo models, routes and utilities
-│   └── tests/         # Node test runner suite
-├── Frontend/
-│   └── src/           # React views, API client and styles
-├── render.yaml        # Render API Blueprint
+├── Backend/       # Express API, Mongoose models, scripts and tests
+├── Frontend/      # React + Vite application
+├── render.yaml    # One-service Render Blueprint with automatic deploys
 ├── DEPLOYMENT_GUIDE.md
 ├── UI_REFERENCE_MAPPING.md
 └── TEST_REPORT.md
 ```
 
-## Technology stack
-
-- Frontend: React 18, Vite 6, Axios, Recharts, Lucide React
-- Backend: Node.js, Express 4, Mongoose 8
-- Database: MongoDB Atlas
-- Hosting: Vercel (frontend) + Render (backend)
-
 ## Run locally
+1. `cd Backend`; copy `.env.example` to `.env`, enter your Atlas URI, run `npm ci` and `npm run dev`.
+2. In another terminal, `cd Frontend`; run `npm ci` and `npm run dev`.
+3. Open `http://localhost:5173`. Vite proxies `/api` to the backend on port 8000.
 
-1. `cd Backend` → copy `.env.example` to `.env` and add your Atlas URI → `npm ci` → `npm run dev`.
-2. In another terminal, `cd Frontend` → `npm ci` → `npm run dev`.
-3. Open `http://localhost:5173`.
-
-See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for complete local setup, seeding, open hospital directory import, GitHub, Render and Vercel instructions. See [UI_REFERENCE_MAPPING.md](UI_REFERENCE_MAPPING.md) for how the four supplied Stitch screens map to live database data, and [TEST_REPORT.md](TEST_REPORT.md) for the exact checks completed and checks still requiring dependencies/live services.
+## Deploy
+Connect this repository to Render as a Blueprint. The root `render.yaml` builds the frontend and backend dependencies, builds Vite, and starts Express. Express serves `Frontend/dist` and handles `/api/*` from the same domain. Set `MONGODB_URI` in Render. Render auto-deploys new commits to the connected branch. See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
 
 ## Demo-data warning
-
-Patient, doctor and appointment records created by `npm run seed` are synthetic. The public hospital directory uses a separate `public_hospitals` collection and carries source metadata. The application currently does not provide authentication or per-patient authorization; do not place real patient data in a public deployment.
+Patient, doctor and appointment seed records are synthetic. The public hospital directory is separate. The application does not provide authentication or per-patient authorization; do not use real patient data in this public demo.

@@ -47,18 +47,8 @@ test('liveness endpoint returns 200 without requiring MongoDB', async () => {
   assert.deepEqual(await response.json(), { status: 'ok', service: 'caresphere-api' });
 });
 
-test('allowed local frontend origin receives CORS headers', async () => {
-  const response = await fetch(`${base}/api/health/live`, {
-    headers: { Origin: 'http://localhost:5173' },
-  });
+test('same-origin liveness request works without a CORS allowlist', async () => {
+  const response = await fetch(`${base}/api/health/live`);
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get('access-control-allow-origin'), 'http://localhost:5173');
-});
-
-test('unconfigured browser origin is rejected with an actionable status', async () => {
-  const response = await fetch(`${base}/api/health/live`, {
-    headers: { Origin: 'https://not-allowed.example' },
-  });
-  assert.equal(response.status, 403);
-  assert.match((await response.json()).detail, /not listed in CORS_ORIGINS/);
+  assert.deepEqual(await response.json(), { status: 'ok', service: 'caresphere-api' });
 });

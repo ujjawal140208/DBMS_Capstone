@@ -27,17 +27,6 @@ export const PORT = Number(process.env.PORT) || 8000;
 export const HOST = clean(process.env.HOST, '0.0.0.0');
 // Render forwards client IP headers through its edge proxy; the hosted service enables one-hop trust.
 export const TRUST_PROXY = process.env.TRUST_PROXY === '1' || process.env.VERCEL === '1';
-export const CORS_ORIGINS = [...new Set(
-  (process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean)
-    .map((value) => {
-      try { return new URL(value).origin; } catch { return ''; }
-    })
-    .filter(Boolean),
-)];
-
 export const COLLECTIONS = [
   'hospitals', 'public_hospitals', 'departments', 'patients', 'doctors', 'appointments',
   'prescriptions', 'medicines', 'lab_tests', 'lab_results', 'bills',
